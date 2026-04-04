@@ -106,11 +106,21 @@ def signup_page():
         username = st.text_input("Choose a Username")
         email = st.text_input("Email")
         password = st.text_input("Choose a Password", type="password")
-        uploaded_file = st.file_uploader("Upload your default Model Image", type=["jpg", "jpeg", "png"])
+        uploaded_file = st.file_uploader("Upload your default Model Image", type=["png", "jpg", "jpeg", "webp", "jfif"])
 
         if st.form_submit_button("Create Account"):
             if not username or not email or not password or uploaded_file is None:
                 st.error("Please fill out all fields and upload an image.")
+
+            elif not email.endswith("@gmail.com"):
+                st.error("Email must be a valid @gmail.com address.")
+
+            elif not (any(c.isalpha() for c in username) and any(c.isdigit() for c in username)):
+                st.error("Username must contain both letters and numbers.")
+
+            elif len(password) < 5 or not (any(c.isalpha() for c in password) and any(c.isdigit() for c in password)):
+                st.error("Password must be at least 5 characters long and contain both letters and numbers.")
+
             else:
                 try:
                     if not os.path.exists("user_models"): os.makedirs("user_models")
@@ -129,13 +139,11 @@ def signup_page():
                     st.session_state.logged_in_user = username
                     st.session_state.model_image_path = saved_image_path
                     st.success("Account created successfully!")
-                    # שינוי: מעביר ישירות לעמוד ההוראות!
                     switch_page('instructions')
                     st.rerun()
                 except sqlite3.IntegrityError:
                     st.error("Username already taken... try again")
     st.button("🔙 Back to Welcome", on_click=switch_page, args=('welcome',))
-
 
 ####instructions page
 def instructions_page():
