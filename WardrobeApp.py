@@ -22,7 +22,7 @@ if 'logged_in_user' not in st.session_state:
 if 'model_image_path' not in st.session_state:
     st.session_state.model_image_path = None
 if 'last_result' not in st.session_state:
-    st.session_state.last_result = None
+    st.session_state.last_result = st.session_state.get('model_image_path', None)
 if 'global_canvas' not in st.session_state:
     st.session_state.global_canvas = st.session_state.get('model_image_path', None)
 
@@ -186,17 +186,24 @@ def changecolor_page():
     st.button("BACK", on_click=switch_page, args=('instructions',))
     st.markdown("---")
 
-    if 'global_canvas' not in st.session_state or not st.session_state.global_canvas:
-        st.session_state.global_canvas = st.session_state.model_image_path
+    if 'last_result' not in st.session_state:
+        st.session_state.last_result = st.session_state.model_image_path
+
+    if 'working_color_base' not in st.session_state:
+        st.session_state.working_color_base = st.session_state.model_image_path
+
+    if 'clean_color_base' not in st.session_state:
+        st.session_state.clean_color_base = st.session_state.model_image_path
+
+    if st.session_state.last_result and "color_res" not in st.session_state.last_result:
+        st.session_state.working_color_base = st.session_state.last_result
+
 
     if 'mixer_colors' not in st.session_state:
         st.session_state.mixer_colors = {
             "Top": "Original", "Bottom": "Original", "Dress": "Original", "Jacket": "Original", "Shoes": "Original",
             "Glasses": "Original"
         }
-
-    if 'last_result' not in st.session_state:
-        st.session_state.last_result = None
 
     col_left, col_right = st.columns([1, 1.5])
 
@@ -218,8 +225,9 @@ def changecolor_page():
         st.markdown("---")
 
         if st.button("Use Permanent Model 👤", use_container_width=True):
-            st.session_state.global_canvas = st.session_state.model_image_path
-            st.session_state.last_result = None
+            st.session_state.clean_color_base = st.session_state.model_image_path
+            st.session_state.working_color_base = st.session_state.model_image_path
+            st.session_state.last_result = st.session_state.model_image_path
             st.rerun()
 
         with st.popover("Take Live Photo 📸", use_container_width=True):
@@ -244,7 +252,9 @@ def changecolor_page():
                 with open(temp_model_path, "wb") as f:
                     f.write(image_bytes)
 
-                st.session_state.global_canvas = temp_model_path
+                st.session_state.clean_color_base = temp_model_path
+                st.session_state.working_color_base = temp_model_path
+                st.session_state.last_result = temp_model_path
 
                 st.rerun()
 
@@ -261,7 +271,7 @@ def changecolor_page():
                 changes_str = ", ".join(active_changes)
                 with st.spinner(f"Changing {changes_str}... ✨"):
                     try:
-                        image_to_edit = st.session_state.last_result if st.session_state.last_result else st.session_state.global_canvas
+                        image_to_edit = st.session_state.working_color_base
                         file_to_send = open(image_to_edit, "rb")
                         prompt = f"""
                         Change the colors of these items: {changes_str}.
@@ -292,35 +302,36 @@ def changecolor_page():
                         st.error(f"Error: {e}")
 
     with col_right:
-
         st.subheader("Your Model 👤✨")
-
         if st.session_state.last_result:
             st.image(st.session_state.last_result, use_container_width=True)
-
         else:
-            if st.session_state.global_canvas:
-                st.image(st.session_state.global_canvas, use_container_width=True)
+            st.info("Please use your permanent model or take a live photo to begin!")
 
         if st.button("Clear All 🔄", use_container_width=True):
             for item in st.session_state.mixer_colors:
                 st.session_state.mixer_colors[item] = "Original"
-            st.session_state.global_canvas = st.session_state.model_image_path
-            st.session_state.last_result = None
+            st.session_state.last_result = st.session_state.clean_color_base
             st.rerun()
 
 
 ##### tryon page
 def tryon_page():
-    st.title("Change your outfit! 🎨 ")
+    st.title("Change your outfit! 👗 ")
     st.button("BACK", on_click=switch_page, args=('instructions',))
     st.markdown("---")
 
-    if 'global_canvas' not in st.session_state or not st.session_state.global_canvas:
-        st.session_state.global_canvas = st.session_state.model_image_path
-
     if 'last_result' not in st.session_state:
-        st.session_state.last_result = None
+        st.session_state.last_result = st.session_state.model_image_path
+
+    if 'working_base' not in st.session_state:
+        st.session_state.working_base = st.session_state.model_image_path
+
+    if 'clean_base' not in st.session_state:
+        st.session_state.clean_base = st.session_state.model_image_path
+
+    if st.session_state.last_result and "final_tryon" not in st.session_state.last_result:
+        st.session_state.working_base = st.session_state.last_result
 
     if 'clothing_items' not in st.session_state:
         st.session_state.clothing_items = {
@@ -360,8 +371,8 @@ def tryon_page():
         st.markdown("---")
 
         if st.button("Use Permanent Model 👤", use_container_width=True):
-            st.session_state.global_canvas = st.session_state.model_image_path
-            st.session_state.last_result = None
+            st.session_state.working_base = st.session_state.model_image_path
+            st.session_state.last_result = st.session_state.model_image_path
             st.rerun()
 
         with st.popover("Take Live Photo 📸", use_container_width=True):
@@ -386,8 +397,9 @@ def tryon_page():
                 with open(temp_model_path, "wb") as f:
                     f.write(image_bytes)
 
-                st.session_state.global_canvas = temp_model_path
-                st.session_state.last_result = None
+                st.session_state.working_base = temp_model_path
+                st.session_state.last_result = temp_model_path
+                st.session_state.clean_base = temp_model_path
 
                 st.rerun()
 
@@ -403,7 +415,7 @@ def tryon_page():
                 items_str = ", ".join(active_items.keys())
                 with st.spinner(f"Creating magic with {items_str}... ✨ Please wait."):
                     try:
-                        base_image = st.session_state.last_result if st.session_state.last_result else st.session_state.global_canvas
+                        base_image = st.session_state.working_base
                         files_to_send = [open(base_image, "rb")]
                         for path in active_items.values():
                             files_to_send.append(open(path, "rb"))
@@ -445,7 +457,7 @@ def tryon_page():
         if st.session_state.last_result:
             st.image(st.session_state.last_result, use_container_width=True)
         else:
-            st.image(st.session_state.global_canvas, use_container_width=True)
+            st.info("Please use your permanent model or take a live photo to begin!")
 
         st.markdown("---")
 
@@ -463,8 +475,7 @@ def tryon_page():
         st.write("")
 
         if st.button("Clear All 🔄", use_container_width=True):
-            st.session_state.global_canvas = st.session_state.model_image_path
-            st.session_state.last_result = st.session_state.model_image_path
+            st.session_state.last_result = st.session_state.clean_base
             st.session_state.clothing_items = {
                 "top": None, "bottom": None, "dress": None, "jacket": None, "shoes": None, "glasses": None
             }
@@ -489,13 +500,7 @@ def changemodel_page():
 
     with col2:
         st.subheader("Upload New Photo")
-        upload_method = st.radio("Choose source:", ["Upload from PC", "Take a Live Photo"], horizontal=True)
-
-        new_img = None
-        if upload_method == "Upload from PC":
-            new_img = st.file_uploader("Choose an image file", type=["png", "jpg", "jpeg", "webp", "jfif"])
-        else:
-            new_img = st.camera_input("Snap a new profile photo")
+        new_img = st.file_uploader("Choose an image file", type=["png", "jpg", "jpeg", "webp", "jfif"])
 
         if st.button("Update Permanent Model ✅ ", type="primary", use_container_width=True):
             if new_img:
@@ -510,6 +515,7 @@ def changemodel_page():
 
                     st.session_state.model_image_path = new_path
                     st.session_state.global_canvas = new_path
+                    st.session_state.last_result = new_path
 
                     conn = sqlite3.connect('my_users.db')
                     cursor = conn.cursor()
@@ -536,11 +542,17 @@ def customdesign_page():
     st.button("BACK", on_click=switch_page, args=('instructions',))
     st.markdown("---")
 
-    if 'global_canvas' not in st.session_state or not st.session_state.global_canvas:
-        st.session_state.global_canvas = st.session_state.model_image_path
-
     if 'last_result' not in st.session_state:
-        st.session_state.last_result = None
+        st.session_state.last_result = st.session_state.model_image_path
+
+    if 'working_design_base' not in st.session_state:
+        st.session_state.working_base = st.session_state.model_image_path
+
+    if 'clean_design_base' not in st.session_state:
+        st.session_state.clean_base = st.session_state.model_image_path
+
+    if st.session_state.last_result:
+        st.session_state.working_design_base = st.session_state.last_result
 
     col_left, col_right = st.columns([1, 1.5])
 
@@ -560,8 +572,9 @@ def customdesign_page():
         st.markdown("---")
 
         if st.button("Use Permanent Model 👤", use_container_width=True):
-            st.session_state.global_canvas = st.session_state.model_image_path
-            st.session_state.last_result = None
+            st.session_state.clean_design_base = st.session_state.model_image_path
+            st.session_state.working_design_base = st.session_state.model_image_path
+            st.session_state.last_result = st.session_state.model_image_path
             st.rerun()
 
         with st.popover("Take Live Photo 📸", use_container_width=True):
@@ -586,7 +599,9 @@ def customdesign_page():
                 with open(temp_model_path, "wb") as f:
                     f.write(image_bytes)
 
-                st.session_state.global_canvas = temp_model_path
+                st.session_state.clean_design_base = temp_model_path
+                st.session_state.working_design_base = temp_model_path
+                st.session_state.last_result = temp_model_path
                 st.rerun()
 
         st.write("")
@@ -599,7 +614,7 @@ def customdesign_page():
             else:
                 with st.spinner(f"Designing your {item_to_change_desgin}... ✨"):
                     try:
-                        image_to_send = st.session_state.last_result if st.session_state.last_result else st.session_state.global_canvas
+                        image_to_send = st.session_state.working_design_base
                         file = open(image_to_send, "rb")
                         prompt = f"""
                         Take the person in the image and redesign their {item_to_change_desgin}.
@@ -637,11 +652,10 @@ def customdesign_page():
         if st.session_state.last_result:
             st.image(st.session_state.last_result, use_container_width=True)
         else:
-            st.image(st.session_state.global_canvas, use_container_width=True)
+            st.info("Please use your permanent model or take a live photo to begin!")
 
         if st.button("Clear 🔄 ", use_container_width=True):
-            st.session_state.global_canvas = st.session_state.model_image_path
-            st.session_state.last_result = None
+            st.session_state.last_result = st.session_state.working_design_base
             st.rerun()
 
 #### פונקציית עזר
