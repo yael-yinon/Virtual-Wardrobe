@@ -425,8 +425,9 @@ def tryon_page():
                             - Maintain the exact texture, color, and design of each clothing item.
                             - If the item the model is already wearing has a logo/drawing on it and that is the item you need to replace with a new one, make sure to not leave the logo on the new item you fit on the model.   
                             - Ensure all items ({items_str}) are layered naturally on the body at the same time.
-                            - Do not modify the person's face, pose, or the background.
+                            - Do NOT modify the person's face, pose, or the background! 
                             - The output should be a single image of the person wearing all selected items.
+                            - Make sure the result is as realistic as possible.
                             """
 
                         result = client.images.edit(
@@ -621,9 +622,10 @@ def customdesign_page():
                         New design description: {design_prompt}.
                         IMPORTANT RULES:
                         - Keep the exact original shape and folds of the clothing.
-                        - Do not modify the person's face, body, pose, or the background.
+                        - Do NOT modify the person's face, body, pose, or the background.
                         - Only change the pattern and color of the specified {item_to_change_desgin}.
                         - If you receive a request to change the design of a none existing item, do not change anything and ignore the request.
+                        - Make sure the result is as realistic as possible.
                         """
                         result = client.images.edit(
                             model="gpt-image-1",
