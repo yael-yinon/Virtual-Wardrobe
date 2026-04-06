@@ -550,7 +550,7 @@ def customdesign_page():
         st.session_state.working_base = st.session_state.model_image_path
 
     if 'clean_design_base' not in st.session_state:
-        st.session_state.clean_base = st.session_state.model_image_path
+        st.session_state.clean_design_base = st.session_state.model_image_path
 
     if st.session_state.last_result:
         st.session_state.working_design_base = st.session_state.last_result
@@ -657,6 +657,7 @@ def customdesign_page():
 
         if st.button("Clear 🔄 ", use_container_width=True):
             st.session_state.last_result = st.session_state.clean_design_base
+
             st.rerun()
 
 #### פונקציית עזר
