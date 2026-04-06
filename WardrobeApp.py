@@ -340,15 +340,8 @@ def tryon_page():
 
         for cat_key, btn_text in categories.items():
             with st.popover(btn_text, use_container_width=True):
-                input_method = st.radio(f"How to add?", ["Upload Image", "Use Camera"], horizontal=True,
-                                        key=f"radio_{cat_key}")
-
-                uploaded_item = None
-                if input_method == "Upload Image":
-                    uploaded_item = st.file_uploader("Upload File", type=["png", "jpg", "jpeg", "webp", "jfif"],
-                                                     key=f"up_{cat_key}", label_visibility="collapsed")
-                else:
-                    uploaded_item = st.camera_input("Take a picture", key=f"cam_{cat_key}")
+                uploaded_item = st.file_uploader("Upload Image", type=["png", "jpg", "jpeg", "webp", "jfif"],
+                                                 key=f"up_{cat_key}")
 
                 if st.button(f"Save to {cat_key.capitalize()}", key=f"save_{cat_key}", use_container_width=True):
                     if uploaded_item:
