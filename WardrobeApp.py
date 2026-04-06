@@ -53,14 +53,19 @@ def profile_sidebar():
             st.markdown("---")
 
             if st.session_state.model_image_path:
-                st.image(st.session_state.model_image_path, caption="Your Profile Picture", use_container_width=True)
+                safe_path = st.session_state.model_image_path.replace("\\", "/")
+
+                if os.path.exists(safe_path):
+                    st.image(safe_path, caption="Your Profile Picture", width='stretch')
+                else:
+                    st.warning("Model image not found on server. Please upload a new model (go to Change your permanent model).")
 
             st.markdown("---")
 
-            st.button("Instructions", on_click=switch_page, args=('instructions',), use_container_width=True)
+            st.button("Instructions", on_click=switch_page, args=('instructions',), width='stretch')
             st.button("Change your permanent model", on_click=switch_page, args=('change model',),
-                      use_container_width=True)
-            st.button("Log Out", on_click=logout, use_container_width=True)
+                      width='stretch')
+            st.button("Log Out", on_click=logout, width='stretch')
 
 
 ###### welcome page - before login/signup
@@ -143,7 +148,7 @@ def signup_page():
                     st.rerun()
                 except sqlite3.IntegrityError:
                     st.error("Username already taken... try again")
-    st.button("🔙 Back to Welcome", on_click=switch_page, args=('welcome',))
+    st.button("BACK", on_click=switch_page, args=('welcome',))
 
 ####instructions page
 def instructions_page():
