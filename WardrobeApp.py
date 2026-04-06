@@ -640,7 +640,6 @@ def customdesign_page():
                         with open(result_path, "wb") as f:
                             f.write(image_bytes)
 
-                        st.session_state.global_canvas = result_path
                         st.session_state.last_result = result_path
                         st.success("Done! 🎉")
                         st.rerun()
@@ -657,7 +656,7 @@ def customdesign_page():
             st.info("Please use your permanent model or take a live photo to begin!")
 
         if st.button("Clear 🔄 ", use_container_width=True):
-            st.session_state.last_result = st.session_state.working_design_base
+            st.session_state.last_result = st.session_state.clean_design_base
             st.rerun()
 
 #### פונקציית עזר
