@@ -23,8 +23,6 @@ if 'model_image_path' not in st.session_state:
     st.session_state.model_image_path = None
 if 'last_result' not in st.session_state:
     st.session_state.last_result = st.session_state.get('model_image_path', None)
-if 'global_canvas' not in st.session_state:
-    st.session_state.global_canvas = st.session_state.get('model_image_path', None)
 
 
 def switch_page(page_name):
@@ -42,6 +40,10 @@ def init_db():
     cursor = conn.cursor()
     cursor.execute('''CREATE TABLE IF NOT EXISTS users
                       (username TEXT PRIMARY KEY, email TEXT, password TEXT, model_image_path TEXT)''')
+############
+    cursor.execute('''CREATE TABLE IF NOT EXISTS favorites
+                          (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, image_path TEXT)''')
+#################
     conn.commit()
     conn.close()
 
@@ -66,6 +68,7 @@ def profile_sidebar():
             st.button("Change your permanent model", on_click=switch_page, args=('change model',),
                       width='stretch')
             st.button("Log Out", on_click=logout, width='stretch')
+            st.button("Your Closet", on_click=switch_page, args=('closet page',), width='stretch')
 
 
 ###### welcome page - before login/signup
@@ -81,7 +84,6 @@ def welcome_page():
 
 #####login page
 def login_page():
-    # elif st.session_state.current_page == 'login':
     st.title("Log In")
     with st.form("login_form"):
         username = st.text_input("Username")
@@ -281,6 +283,7 @@ def changecolor_page():
                         - Maintain the original texture and fabric fold.
                         - If you get a request to change the color of an item that is not present in the picture, DO NOT CHANGE ANYTHING and move on to the next item.
                         - If you need to change the color of glasses/sunglasses change ONLY the color of the frames.
+                        - Make sure that the persons face and body stay in the frame, just as they did in the original image.
                         """
                         result = client.images.edit(
                             model="gpt-image-1",
@@ -313,6 +316,21 @@ def changecolor_page():
                 st.session_state.mixer_colors[item] = "Original"
             st.session_state.last_result = st.session_state.clean_color_base
             st.rerun()
+
+        if st.button("Save to Closet 💖", use_container_width=True, type="secondary"):
+            try:
+                conn = sqlite3.connect('my_users.db')
+                cursor = conn.cursor()
+
+                cursor.execute("INSERT INTO favorites (username, image_path) VALUES (?, ?)",
+                               (st.session_state.logged_in_user, st.session_state.last_result))
+                conn.commit()
+                conn.close()
+
+                st.success("Saved to your closet! 👗✨")
+            except Exception as e:
+                st.error("Oops, something went wrong saving your design... Try again later")
+
 
 
 ##### tryon page
@@ -428,6 +446,7 @@ def tryon_page():
                             - Do NOT modify the person's face, pose, or the background! 
                             - The output should be a single image of the person wearing all selected items.
                             - Make sure the result is as realistic as possible.
+                            - Make sure that the persons face and body stay in the frame, just as they did in the original image.
                             """
 
                         result = client.images.edit(
@@ -440,8 +459,10 @@ def tryon_page():
                         for f in files_to_send:
                             f.close()
 
+                        time_id = int(time.time())
+
                         image_bytes = base64.b64decode(result.data[0].b64_json)
-                        final_path = os.path.join("user_models", f"final_tryon_{st.session_state.logged_in_user}.png")
+                        final_path = os.path.join("user_models", f"final_tryon_{st.session_state.logged_in_user}_{time_id}.png")
 
                         with open(final_path, "wb") as f:
                             f.write(image_bytes)
@@ -481,6 +502,20 @@ def tryon_page():
                 "top": None, "bottom": None, "dress": None, "jacket": None, "shoes": None, "glasses": None
             }
             st.rerun()
+
+        if st.button("Save to Closet 💖", use_container_width=True, type="secondary"):
+            try:
+                conn = sqlite3.connect('my_users.db')
+                cursor = conn.cursor()
+
+                cursor.execute("INSERT INTO favorites (username, image_path) VALUES (?, ?)",
+                               (st.session_state.logged_in_user, st.session_state.last_result))
+                conn.commit()
+                conn.close()
+
+                st.success("Saved to your closet! 👗✨")
+            except Exception as e:
+                st.error("Oops, something went wrong saving your design... Try again later")
 
 #### change the permanent model page
 def changemodel_page():
@@ -626,6 +661,7 @@ def customdesign_page():
                         - Only change the pattern and color of the specified {item_to_change_desgin}.
                         - If you receive a request to change the design of a none existing item, do not change anything and ignore the request.
                         - Make sure the result is as realistic as possible.
+                        - Make sure that the persons face and body stay in the frame, just as they did in the original image.
                         """
                         result = client.images.edit(
                             model="gpt-image-1",
@@ -659,6 +695,21 @@ def customdesign_page():
             st.session_state.last_result = st.session_state.clean_design_base
 
             st.rerun()
+
+        if st.button("Save to Closet 💖", use_container_width=True, type="secondary"):
+            try:
+                conn = sqlite3.connect('my_users.db')
+                cursor = conn.cursor()
+
+                cursor.execute("INSERT INTO favorites (username, image_path) VALUES (?, ?)",
+                               (st.session_state.logged_in_user, st.session_state.last_result))
+                conn.commit()
+                conn.close()
+
+                st.success("Saved to your closet! 👗✨")
+            except Exception as e:
+                st.error("Oops, something went wrong saving your design... Try again later")
+
 
 #### פונקציית עזר
 def encode_image_for_api(uploaded_file):
@@ -740,6 +791,31 @@ def consult_page():
                     st.error(f"Error: {e}")
 
 
+def my_closet_page():
+    st.title("My Closet 👗✨")
+    st.markdown("Here are all your favorite designs!")
+
+    st.button("BACK", on_click=switch_page, args=('instructions',))
+    st.markdown("---")
+
+    conn = sqlite3.connect('my_users.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT image_path FROM favorites WHERE username=?", (st.session_state.logged_in_user,))
+    saved_images = cursor.fetchall()
+    conn.close()
+
+    if not saved_images:
+        st.info("Your closet is empty....")
+    else:
+        cols = st.columns(3)
+
+        for index, image_data in enumerate(saved_images):
+            img_path = image_data[0]
+
+            with cols[index % 3]:
+                st.image(img_path, use_container_width=True)
+
+
 def main():
     init_db()
     profile_sidebar()
@@ -762,6 +838,8 @@ def main():
         customdesign_page()
     elif st.session_state.current_page == 'consult page':
         consult_page()
+    elif st.session_state.current_page == 'closet page':
+        my_closet_page()
 
 
 
