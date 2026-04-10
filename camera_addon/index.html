@@ -12,21 +12,21 @@
 </head>
 <body>
     <div id="setup">
-        <button onclick="startCamera()">1. Turn on Camera 📷</button>
+        <button onclick="startCamera()">1. Turn on Camera </button>
     </div>
 
     <div id="camera-view" style="display: none;">
         <video id="video" autoplay playsinline></video>
         <div id="countdown"></div>
-        <button id="startBtn" onclick="startTimer()">2. Start 3s Timer 📸</button>
+        <button id="startBtn" onclick="startTimer()">2. Start 3s Timer </button>
     </div>
 
-    <div id="success-msg">📸 Photo Captured! Processing...</div>
+    <div id="success-msg"> Photo Captured! Processing...</div>
 
     <canvas id="canvas" style="display:none;"></canvas>
 
     <script>
-        // --- פונקציית הקסם שמחליפה את הספרייה של Streamlit ---
+        // פונקציה ששולחת בסוף לסטרימליט
         function sendToStreamlit(type, data) {
             const message = Object.assign({ isStreamlitMessage: true, type: type }, data);
             window.parent.postMessage(message, "*");
@@ -38,7 +38,7 @@
             sendToStreamlit("streamlit:setFrameHeight", {height: 170});
         }, 100);
 
-        // --- הלוגיקה שלך למצלמה ---
+        // הלוגיקה של המצלמה
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const countdownDiv = document.getElementById('countdown');
@@ -56,6 +56,7 @@
                 .catch(err => { console.error("Camera error:", err); });
         }
 
+        // הלוגיקה של הטיימר
         function startTimer() {
             document.getElementById('startBtn').style.display = 'none';
             let timeLeft = 3;
@@ -67,12 +68,12 @@
                     countdownDiv.innerText = timeLeft;
                 } else {
                     clearInterval(timer);
-                    countdownDiv.innerText = "💥 SNAP!";
+                    countdownDiv.innerText = "SNAP!";
                     takePhotoAuto();
                 }
             }, 1000);
         }
-
+        // צילום התמונה
         function takePhotoAuto() {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
@@ -86,6 +87,7 @@
             document.getElementById('success-msg').style.display = 'block';
             sendToStreamlit("streamlit:setFrameHeight", {height: 170});
 
+            // שליחת התמונה לפייתון
             const dataURL = canvas.toDataURL('image/jpeg', 0.6);
             sendToStreamlit("streamlit:setComponentValue", {value: dataURL, dataType: "json"});
         }

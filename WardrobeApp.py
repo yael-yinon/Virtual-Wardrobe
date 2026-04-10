@@ -6,11 +6,12 @@ import time
 import base64
 import streamlit.components.v1 as components
 
+## used to connect the camara component
 current_dir = os.path.dirname(os.path.abspath(__file__))
 timer_path = os.path.join(current_dir, "camera_addon")
 auto_camera = components.declare_component("cam_final_check", path=timer_path)
 
-
+## connection to api key thats hidden
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 st.set_page_config(page_title="My Virtual Wardrobe", page_icon="👗", layout="centered")
@@ -24,30 +25,30 @@ if 'model_image_path' not in st.session_state:
 if 'last_result' not in st.session_state:
     st.session_state.last_result = st.session_state.get('model_image_path', None)
 
-
+## function to change the page according to user choice
 def switch_page(page_name):
     st.session_state.current_page = page_name
 
-
+## diconnectiong the user from current session and sending him back to welcome page
 def logout():
     st.session_state.logged_in_user = None
     st.session_state.model_image_path = None
     switch_page('welcome')
 
-
+## incharge of the database
 def init_db():
     conn = sqlite3.connect('my_users.db')
     cursor = conn.cursor()
     cursor.execute('''CREATE TABLE IF NOT EXISTS users
                       (username TEXT PRIMARY KEY, email TEXT, password TEXT, model_image_path TEXT)''')
-############
+
     cursor.execute('''CREATE TABLE IF NOT EXISTS favorites
                           (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, image_path TEXT)''')
-#################
+
     conn.commit()
     conn.close()
 
-
+### shows a sidenbar with your profile pic
 def profile_sidebar():
     if st.session_state.logged_in_user:
         with st.sidebar:
@@ -57,18 +58,19 @@ def profile_sidebar():
             if st.session_state.model_image_path:
                 safe_path = st.session_state.model_image_path.replace("\\", "/")
 
+                ### presenting your model picture
                 if os.path.exists(safe_path):
                     st.image(safe_path, caption="Your Profile Picture", width='stretch')
                 else:
                     st.warning("Model image not found on server. Please upload a new model (go to Change your permanent model).")
 
             st.markdown("---")
-
+        ##buttons to move to different pages
             st.button("Instructions", on_click=switch_page, args=('instructions',), width='stretch')
             st.button("Change your permanent model", on_click=switch_page, args=('change model',),
                       width='stretch')
             st.button("Log Out", on_click=logout, width='stretch')
-            st.button("Your Closet", on_click=switch_page, args=('closet page',), width='stretch')
+            st.button("My Closet", on_click=switch_page, args=('closet page',), width='stretch')
 
 
 ###### welcome page - before login/signup
@@ -115,6 +117,7 @@ def signup_page():
         password = st.text_input("Choose a Password", type="password")
         uploaded_file = st.file_uploader("Upload your default Model Image", type=["png", "jpg", "jpeg", "webp", "jfif"])
 
+        ## things you have to fill out to create account
         if st.form_submit_button("Create Account"):
             if not username or not email or not password or uploaded_file is None:
                 st.error("Please fill out all fields and upload an image.")
@@ -128,6 +131,7 @@ def signup_page():
             elif len(password) < 5 or not (any(c.isalpha() for c in password) and any(c.isdigit() for c in password)):
                 st.error("Password must be at least 5 characters long and contain both letters and numbers.")
 
+            ## connecting to database
             else:
                 try:
                     if not os.path.exists("user_models"): os.makedirs("user_models")
@@ -156,6 +160,7 @@ def signup_page():
 def instructions_page():
     st.title("How to use your Virtual Wardrobe?")
 
+    ##explanations on the different pages
     st.markdown("""
         Welcome to your personal virtual dressing room! Here is what you can do:
 
@@ -173,6 +178,7 @@ def instructions_page():
 
     st.write("")
 
+    ##buttons to go to the main pages
     col1, col2 = st.columns(2)
     with col1:
         st.button("Go to Color Changer 🎨 ", on_click=switch_page, args=('changecolor',), use_container_width=True)
@@ -215,6 +221,7 @@ def changecolor_page():
 
         color_options = ["Original", "Red", "Blue", "Green", "Black", "White", "Pink", "Yellow", "Purple", "Beige"]
 
+    ##choosing colors
         for item in st.session_state.mixer_colors.keys():
             col_sel, col_reset = st.columns([4, 1])
             with col_sel:
@@ -226,13 +233,14 @@ def changecolor_page():
 
         st.markdown("---")
 
-        if st.button("Use Permanent Model 👤", use_container_width=True):
+        if st.button("Use Permanent Model", use_container_width=True):
             st.session_state.clean_color_base = st.session_state.model_image_path
             st.session_state.working_color_base = st.session_state.model_image_path
             st.session_state.last_result = st.session_state.model_image_path
             st.rerun()
 
-        with st.popover("Take Live Photo 📸", use_container_width=True):
+        ##taking a live photo for model
+        with st.popover("Take Live Photo", use_container_width=True):
             image_b64 = auto_camera(key="camera_new_v1")
 
             if 'last_captured_image_color' not in st.session_state:
@@ -262,18 +270,19 @@ def changecolor_page():
 
         st.write("")
 
-        if st.button("🪄 UPDATE COLORS", type="primary", use_container_width=True):
+        if st.button("UPDATE COLORS", type="primary", use_container_width=True):
             active_changes = [f"{k} to {v}" for k, v in st.session_state.mixer_colors.items() if v != "Original"]
 
+        ### api openai usage
             if not active_changes:
                 st.error("Please select at least one color to change!")
             elif 'client' not in globals() or client is None:
                 st.error("API Key missing.")
             else:
-                changes_str = ", ".join(active_changes)
+                changes_str = ", ".join(active_changes) ### preparing what to send to the api
                 with st.spinner(f"Changing {changes_str}... ✨"):
                     try:
-                        image_to_edit = st.session_state.working_color_base
+                        image_to_edit = st.session_state.working_color_base ## using the chosen image
                         file_to_send = open(image_to_edit, "rb")
                         prompt = f"""
                         Change the colors of these items: {changes_str}.
@@ -285,7 +294,7 @@ def changecolor_page():
                         - If you need to change the color of glasses/sunglasses change ONLY the color of the frames.
                         - Make sure that the persons face and body stay in the frame, just as they did in the original image.
                         """
-                        result = client.images.edit(
+                        result = client.images.edit( ## sending to the api
                             model="gpt-image-1",
                             image=[file_to_send],
                             prompt=prompt,
@@ -298,26 +307,26 @@ def changecolor_page():
                         with open(res_path, "wb") as f:
                             f.write(image_bytes)
 
-                        st.session_state.last_result = res_path
-                        st.success("Done! 🎉")
+                        st.session_state.last_result = res_path ## saving the result
+                        st.success("Done!")
                         st.rerun()
                     except Exception as e:
                         st.error(f"Error: {e}")
 
-    with col_right:
-        st.subheader("Your Model 👤✨")
+    with col_right: ## presenting the model and last result
+        st.subheader("Your Model")
         if st.session_state.last_result:
             st.image(st.session_state.last_result, use_container_width=True)
         else:
             st.info("Please use your permanent model or take a live photo to begin!")
 
-        if st.button("Clear All 🔄", use_container_width=True):
+        if st.button("Clear All", use_container_width=True): ## reset everything and go back to the original picture
             for item in st.session_state.mixer_colors:
                 st.session_state.mixer_colors[item] = "Original"
             st.session_state.last_result = st.session_state.clean_color_base
             st.rerun()
 
-        if st.button("Save to Closet 💖", use_container_width=True, type="secondary"):
+        if st.button("Save to Closet", use_container_width=True, type="secondary"): ## saving the result to favorites
             try:
                 conn = sqlite3.connect('my_users.db')
                 cursor = conn.cursor()
@@ -327,15 +336,15 @@ def changecolor_page():
                 conn.commit()
                 conn.close()
 
-                st.success("Saved to your closet! 👗✨")
+                st.success("Saved to your closet!")
             except Exception as e:
                 st.error("Oops, something went wrong saving your design... Try again later")
 
 
 
-##### tryon page
+##### visual tryon page
 def tryon_page():
-    st.title("Change your outfit! 👗 ")
+    st.title("Change your outfit!")
     st.button("BACK", on_click=switch_page, args=('instructions',))
     st.markdown("---")
 
@@ -372,7 +381,7 @@ def tryon_page():
             "glasses": "Add Glasses 🕶️"
         }
 
-        for cat_key, btn_text in categories.items():
+        for cat_key, btn_text in categories.items(): ## choosing the items and uploading the images
             with st.popover(btn_text, use_container_width=True):
                 uploaded_item = st.file_uploader("Upload Image", type=["png", "jpg", "jpeg", "webp", "jfif"],
                                                  key=f"up_{cat_key}")
@@ -388,12 +397,13 @@ def tryon_page():
 
         st.markdown("---")
 
-        if st.button("Use Permanent Model 👤", use_container_width=True):
+        if st.button("Use Permanent Model", use_container_width=True):
             st.session_state.working_base = st.session_state.model_image_path
             st.session_state.last_result = st.session_state.model_image_path
             st.rerun()
 
-        with st.popover("Take Live Photo 📸", use_container_width=True):
+        ## taking a photo to be the model
+        with st.popover("Take Live Photo", use_container_width=True):
             image_b64 = auto_camera(key="camera_new_v1")
 
             if 'last_captured_image' not in st.session_state:
@@ -423,7 +433,7 @@ def tryon_page():
 
         st.write("")
 
-        if st.button("✨ TRY ON ✨", use_container_width=True, type="primary"):
+        if st.button("TRY ON", use_container_width=True, type="primary"):
             active_items = {k: v for k, v in st.session_state.clothing_items.items() if v is not None}
             if not active_items:
                 st.error("Please add at least one clothing item!")
@@ -435,7 +445,7 @@ def tryon_page():
                     try:
                         base_image = st.session_state.working_base
                         files_to_send = [open(base_image, "rb")]
-                        for path in active_items.values():
+                        for path in active_items.values(): ## preparing all the items pics and model pic to the api
                             files_to_send.append(open(path, "rb"))
 
                         prompt = f"""
@@ -449,7 +459,7 @@ def tryon_page():
                             - Make sure that the persons face and body stay in the frame, just as they did in the original image.
                             """
 
-                        result = client.images.edit(
+                        result = client.images.edit( ## sending to the api
                             model="gpt-image-1",
                             image=files_to_send,
                             prompt=prompt,
@@ -467,15 +477,15 @@ def tryon_page():
                         with open(final_path, "wb") as f:
                             f.write(image_bytes)
 
-                        st.session_state.last_result = final_path
-                        st.success("Done! ✨")
+                        st.session_state.last_result = final_path ## saving the result
+                        st.success("Done!")
                         st.rerun()
 
                     except Exception as e:
                         st.error(f"API Error details: {e}")
 
-    with col_right:
-        st.subheader("Your Model 👤✨")
+    with col_right: ## presenting the model and the last result
+        st.subheader("Your Model")
         if st.session_state.last_result:
             st.image(st.session_state.last_result, use_container_width=True)
         else:
@@ -483,7 +493,7 @@ def tryon_page():
 
         st.markdown("---")
 
-        st.markdown("**👗 Current Selected Items:**")
+        st.markdown("**👗 Current Selected Items:**") ##presents the items that were selected and allows deleting them
         outfit_cols = st.columns(6)
         for i, (cat, path) in enumerate(st.session_state.clothing_items.items()):
             with outfit_cols[i]:
@@ -496,14 +506,14 @@ def tryon_page():
 
         st.write("")
 
-        if st.button("Clear All 🔄", use_container_width=True):
+        if st.button("Clear All", use_container_width=True): ## reset the model and delete the chosen items from the currently used items
             st.session_state.last_result = st.session_state.clean_base
             st.session_state.clothing_items = {
                 "top": None, "bottom": None, "dress": None, "jacket": None, "shoes": None, "glasses": None
             }
             st.rerun()
 
-        if st.button("Save to Closet 💖", use_container_width=True, type="secondary"):
+        if st.button("Save to Closet", use_container_width=True, type="secondary"): ## saving the result to favorites
             try:
                 conn = sqlite3.connect('my_users.db')
                 cursor = conn.cursor()
@@ -513,7 +523,7 @@ def tryon_page():
                 conn.commit()
                 conn.close()
 
-                st.success("Saved to your closet! 👗✨")
+                st.success("Saved to your closet!")
             except Exception as e:
                 st.error("Oops, something went wrong saving your design... Try again later")
 
@@ -527,14 +537,14 @@ def changemodel_page():
 
     col1, col2 = st.columns([1, 1])
 
-    with col1:
+    with col1: ### presenting current model
         st.subheader("Current Model")
         if st.session_state.model_image_path and os.path.exists(st.session_state.model_image_path):
             st.image(st.session_state.model_image_path, caption="Your active photo", use_container_width=True)
         else:
             st.info("No model uploaded yet.")
 
-    with col2:
+    with col2: ## uploading a new photo
         st.subheader("Upload New Photo")
         new_img = st.file_uploader("Choose an image file", type=["png", "jpg", "jpeg", "webp", "jfif"])
 
@@ -553,6 +563,7 @@ def changemodel_page():
                     st.session_state.global_canvas = new_path
                     st.session_state.last_result = new_path
 
+                    ## update data base
                     conn = sqlite3.connect('my_users.db')
                     cursor = conn.cursor()
                     cursor.execute("""
@@ -567,7 +578,7 @@ def changemodel_page():
                     time.sleep(1)
                     st.rerun()
             else:
-                st.error("Please select or take a photo first!")
+                st.error("Please select a photo first!")
 
     st.write("---")
     st.info("💡 Note: Changing your permanent model will reset any current outfit or color changes you've made.")
@@ -595,11 +606,13 @@ def customdesign_page():
     with col_left:
         st.markdown("<h4 style='text-align: center; color: #b764d4;'>Design Your Clothes</h4>", unsafe_allow_html=True)
 
+        ##selecting what item to design
         item_to_change_desgin = st.selectbox(
             "1. Which item do you want to redesign?",
             ["Top ", "Bottom ", "Dress", "Jacket ", "Shoes", "Glasses"]
         )
 
+        ## explaining new design
         design_prompt = st.text_area(
             "2. Describe your dream design:",
             placeholder="Example: A white background with green polka dots..."
@@ -607,13 +620,14 @@ def customdesign_page():
 
         st.markdown("---")
 
-        if st.button("Use Permanent Model 👤", use_container_width=True):
+        if st.button("Use Permanent Model", use_container_width=True):
             st.session_state.clean_design_base = st.session_state.model_image_path
             st.session_state.working_design_base = st.session_state.model_image_path
             st.session_state.last_result = st.session_state.model_image_path
             st.rerun()
 
-        with st.popover("Take Live Photo 📸", use_container_width=True):
+        ## take a live photo to use as model
+        with st.popover("Take Live Photo", use_container_width=True):
             image_b64 = auto_camera(key="camera_new_v1")
 
             if 'last_captured_image_design' not in st.session_state:
@@ -642,7 +656,7 @@ def customdesign_page():
 
         st.write("")
 
-        if st.button("🪄 GENERATE DESIGN", type="primary", use_container_width=True):
+        if st.button("GENERATE DESIGN", type="primary", use_container_width=True):
             if not design_prompt:
                 st.error("Please describe your design first!")
             elif 'client' not in globals() or client is None:
@@ -676,27 +690,27 @@ def customdesign_page():
                         with open(result_path, "wb") as f:
                             f.write(image_bytes)
 
-                        st.session_state.last_result = result_path
-                        st.success("Done! 🎉")
+                        st.session_state.last_result = result_path #saving the result
+                        st.success("Done!")
                         st.rerun()
                     except Exception as e:
                         st.error(f"Error: {e}")
 
-    with col_right:
+    with col_right: ## presenting the result
 
-        st.subheader("Your Model 👤✨")
+        st.subheader("Your Model")
 
         if st.session_state.last_result:
             st.image(st.session_state.last_result, use_container_width=True)
         else:
             st.info("Please use your permanent model or take a live photo to begin!")
 
-        if st.button("Clear 🔄 ", use_container_width=True):
+        if st.button("Clear All", use_container_width=True): ## reset the model and item choice
             st.session_state.last_result = st.session_state.clean_design_base
 
             st.rerun()
 
-        if st.button("Save to Closet 💖", use_container_width=True, type="secondary"):
+        if st.button("Save to Closet ", use_container_width=True, type="secondary"): ## save the result to favorites
             try:
                 conn = sqlite3.connect('my_users.db')
                 cursor = conn.cursor()
@@ -706,7 +720,7 @@ def customdesign_page():
                 conn.commit()
                 conn.close()
 
-                st.success("Saved to your closet! 👗✨")
+                st.success("Saved to your closet!")
             except Exception as e:
                 st.error("Oops, something went wrong saving your design... Try again later")
 
@@ -723,6 +737,7 @@ def consult_page():
 
     st.markdown("#### Upload up to 3 items and ask for styling advice!")
 
+    ## uploading images
     uploaded_files = st.file_uploader(
         "Choose your items (Top, Bottoms, Shoes...)",
         type=["png", "jpg", "jpeg", "jfif", "webp"],
@@ -740,7 +755,7 @@ def consult_page():
                 st.image(file, use_container_width=True)
 
     st.markdown("---")
-
+    ## here the user enters his question
     user_question = st.text_area(
         "What's your styling dilemma?",
         placeholder="Example: Which of these two pants looks better with the white shirt?"
@@ -785,12 +800,12 @@ def consult_page():
                     ai_response = response.choices[0].message.content
 
                     st.success("Got it! Here is your advice:")
-                    st.info(ai_response)
+                    st.info(ai_response) ## presenting the answer to the user
 
                 except Exception as e:
                     st.error(f"Error: {e}")
 
-
+### see your favorite results
 def my_closet_page():
     st.title("My Closet 👗✨")
     st.markdown("Here are all your favorite designs!")
@@ -798,6 +813,7 @@ def my_closet_page():
     st.button("BACK", on_click=switch_page, args=('instructions',))
     st.markdown("---")
 
+    ##connection to database
     conn = sqlite3.connect('my_users.db')
     cursor = conn.cursor()
     cursor.execute("SELECT image_path FROM favorites WHERE username=?", (st.session_state.logged_in_user,))
@@ -808,12 +824,25 @@ def my_closet_page():
         st.info("Your closet is empty....")
     else:
         cols = st.columns(3)
-
+        ##presenting the images
         for index, image_data in enumerate(saved_images):
             img_path = image_data[0]
 
             with cols[index % 3]:
                 st.image(img_path, use_container_width=True)
+
+                if st.button("Delete", key=f"delete_btn_{index}"):
+                    delete_item_from_db(st.session_state.logged_in_user, img_path)
+                    st.success("Item deleted successfully!")
+                    st.rerun()
+
+### function used to delete a pic from the closet
+def delete_item_from_db(username, image_path):
+    conn = sqlite3.connect('my_users.db')
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM favorites WHERE username=? AND image_path=?", (username, image_path))
+    conn.commit()
+    conn.close()
 
 
 def main():
